@@ -20,10 +20,10 @@ DeepShield is an Android app for detecting deepfake videos using AI. It features
     <th>📊 Results Screen</th>
   </tr>
   <tr>
-    <td><img src="assets/screenshots/login_screen.jpg" alt="Login Screen" width="200"/></td>
-    <td><img src="assets/screenshots/pick_video.jpg" alt="Pick Video Screen" width="200"/></td>
-    <td><img src="assets/screenshots/processing_screen.jpg" alt="Processing Screen" width="200"/></td>
-    <td><img src="assets/screenshots/results_screen.jpg" alt="Results Screen" width="200"/></td>
+    <td><img src="https://github.com/iPriyanshu19/DeepShield/blob/cdd9c677f517a049fd2e458115f85a780b93235b/assets/screenshots/Login_Screen.jpg" alt="Login Screen" width="200"/></td>
+    <td><img src="https://github.com/iPriyanshu19/DeepShield/blob/cdd9c677f517a049fd2e458115f85a780b93235b/assets/screenshots/Pick_Video.jpg" alt="Pick Video Screen" width="200"/></td>
+    <td><img src="https://github.com/iPriyanshu19/DeepShield/blob/cdd9c677f517a049fd2e458115f85a780b93235b/assets/screenshots/Processing_Screen.jpg" alt="Processing Screen" width="200"/></td>
+    <td><img src="https://github.com/iPriyanshu19/DeepShield/blob/cdd9c677f517a049fd2e458115f85a780b93235b/assets/screenshots/Results_Screen.jpg" alt="Results Screen" width="200"/></td>
   </tr>
 </table>
 
