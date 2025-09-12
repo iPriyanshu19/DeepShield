@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: deepshield-backend
+    env: python
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel cmake
+      pip install -r requirements.txt
+      pip install dlib
+    startCommand: gunicorn server:app --timeout 120 --bind 0.0.0.0:$PORT
+    pythonVersion: 3.10
