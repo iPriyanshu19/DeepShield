@@ -2,6 +2,7 @@ services:
   - type: web
     name: deepshield-backend
     env: python
+    rootDir: backend
     buildCommand: |
       pip install --upgrade pip setuptools wheel cmake
       pip install -r requirements.txt
