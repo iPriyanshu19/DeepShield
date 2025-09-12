@@ -10,8 +10,23 @@ DeepShield is an Android app for detecting deepfake videos using AI. It features
 - Modern themed UI
 - Python backend for AI inference
 
-<!-- ## Screenshots -->
-<!-- Add screenshots here if available -->
+## Screenshots  
+
+<table>
+  <tr>
+    <th>🔐 Login Screen</th>
+    <th>📂 Pick Video Screen</th>
+    <th>⚙️ Processing Screen</th>
+    <th>📊 Results Screen</th>
+  </tr>
+  <tr>
+    <td><img src="assets/screenshots/login_screen.jpg" alt="Login Screen" width="200"/></td>
+    <td><img src="assets/screenshots/pick_video.jpg" alt="Pick Video Screen" width="200"/></td>
+    <td><img src="assets/screenshots/processing_screen.jpg" alt="Processing Screen" width="200"/></td>
+    <td><img src="assets/screenshots/results_screen.jpg" alt="Results Screen" width="200"/></td>
+  </tr>
+</table>
+
 
 ## Getting Started
 
@@ -39,7 +54,7 @@ DeepShield is an Android app for detecting deepfake videos using AI. It features
    - Create and activate a virtual environment (optional)
    - Install requirements:
      ```sh
-     pip install -r requirements.txt
+     pip install -r requirements.txt && dlib-19.22.99-cp310-cp310-win_amd64.whl
      ```
    - Start the backend server:
      ```sh
