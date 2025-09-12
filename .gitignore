@@ -67,9 +67,6 @@ backend/myenv/
 backend/static/frames/
 backend/Uploaded_Files/
 
-# Assets
-assets/*.png
-
 # Misc
 *.orig
 *.bak
