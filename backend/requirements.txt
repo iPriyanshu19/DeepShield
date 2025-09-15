@@ -37,3 +37,4 @@ torchvision==0.16.2
 tqdm==4.66.1
 typing-extensions==4.9.0
 Werkzeug==2.3.8
+gunicorn
