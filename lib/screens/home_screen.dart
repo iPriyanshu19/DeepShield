@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:io';
 import 'dart:async';
 import 'dart:typed_data';
@@ -84,7 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return bytes;
     } catch (e) {
-      print('Thumbnail error: $e');
       throw Exception('Thumbnail error: $e');
     }
   }

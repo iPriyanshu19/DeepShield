@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import os
-import uuid
 import torch
-import torchvision
 from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 import numpy as np
@@ -23,8 +21,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Upload folder
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Uploaded_Files')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'Uploaded_Files')
+MODEL_PATH = os.path.join(BASE_DIR, 'model', 'df_model.pt')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+DEVICE = torch.device("cpu")
 
 # Flask app
 app = Flask(__name__)
@@ -91,9 +93,36 @@ class ValidationDataset(Dataset):
                 yield image
 
 # ------------------------
+# Global transform & model (load ONCE)
+# ------------------------
+IM_SIZE = 112
+MEAN = [0.485, 0.456, 0.406]
+STD = [0.229, 0.224, 0.225]
+
+transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((IM_SIZE, IM_SIZE)),
+    transforms.ToTensor(),
+    transforms.Normalize(MEAN, STD)
+])
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
+logger.info(f"Loading model from: {MODEL_PATH}")
+model = Model(num_classes=2)
+state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
+model.load_state_dict(state_dict)
+model.to(DEVICE)
+model.eval()
+logger.info("Model loaded and ready.")
+
+
+# ------------------------
 # Prediction
 # ------------------------
 def predict(model, img):
+    img = img.to(DEVICE)
     with torch.no_grad():
         fmap, logits = model(img)
         logits = F.softmax(logits, dim=1)
@@ -103,30 +132,12 @@ def predict(model, img):
 
 def detectFakeVideo(videoPath):
     start_time = time.time()
-    im_size = 112
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-
-    transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize((im_size, im_size)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-    ])
 
     dataset = ValidationDataset([videoPath], sequence_length=20, transform=transform)
-    model = Model(2)
-    path_to_model = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model/df_model.pt')
+    frames = dataset[0]          # shape (1, seq, C, H, W)
+    prediction = predict(model, frames)
 
-    if not os.path.exists(path_to_model):
-        raise Exception("Model file not found")
-
-    model.load_state_dict(torch.load(path_to_model, map_location=torch.device('cpu')))
-    model.eval()
-
-    prediction = predict(model, dataset[0])
     processing_time = time.time() - start_time
-
     return prediction, processing_time
 
 # ------------------------
@@ -177,5 +188,5 @@ def detect():
         return jsonify({"error": f"Error processing video: {error_msg}"}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))  # default 3000 for local, Railway overrides it
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
