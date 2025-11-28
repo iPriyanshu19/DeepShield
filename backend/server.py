@@ -6,7 +6,7 @@ from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 import numpy as np
 import cv2
-import face_recognition # type: ignore
+# import face_recognition
 import time
 import traceback
 import logging
@@ -27,6 +27,12 @@ MODEL_PATH = os.path.join(BASE_DIR, 'model', 'df_model.pt')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 DEVICE = torch.device("cpu")
+
+# OpenCV face detector (Haar cascade)
+FACE_CASCADE = cv2.CascadeClassifier(
+    os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
+)
+
 
 # Flask app
 app = Flask(__name__)
@@ -70,6 +76,62 @@ class ValidationDataset(Dataset):
     def __getitem__(self, idx):
         video_path = self.video_names[idx]
         frames = []
+
+        for i, frame in enumerate(self.frame_extract(video_path)):
+            # frame: BGR (OpenCV)
+            # 1) detect faces
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = FACE_CASCADE.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30),
+            )
+
+            # 2) crop around first detected face (if any)
+            if len(faces) > 0:
+                (x, y, w, h) = faces[0]
+                frame = frame[y:y+h, x:x+w]
+
+            # 3) transform and collect
+            frames.append(self.transform(frame))
+
+            if len(frames) == self.count:
+                break
+
+        if len(frames) == 0:
+            raise ValueError("No frames extracted from video")
+
+        # pad if less than count
+        while len(frames) < self.count:
+            frames.append(frames[-1])
+
+        frames = torch.stack(frames)
+        frames = frames[:self.count]
+        return frames.unsqueeze(0)
+
+    def frame_extract(self, path):
+        vidObj = cv2.VideoCapture(path)
+        success = True
+        while success:
+            success, image = vidObj.read()
+            if success:
+                yield image
+
+'''
+# Alternative Dataset using face_recognition library (Original version)
+class ValidationDataset(Dataset):
+    def __init__(self, video_names, sequence_length=20, transform=None):
+        self.video_names = video_names
+        self.transform = transform
+        self.count = sequence_length
+
+    def __len__(self):
+        return len(self.video_names)
+
+    def __getitem__(self, idx):
+        video_path = self.video_names[idx]
+        frames = []
         for i, frame in enumerate(self.frame_extract(video_path)):
             faces = face_recognition.face_locations(frame)
             try:
@@ -91,6 +153,7 @@ class ValidationDataset(Dataset):
             success, image = vidObj.read()
             if success:
                 yield image
+'''
 
 # ------------------------
 # Global transform & model (load ONCE)
