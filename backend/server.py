@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import os
+import uuid
 import torch
+import torchvision
 from torchvision import transforms
 from torch.utils.data.dataset import Dataset
 import numpy as np
 import cv2
-# import face_recognition
+import face_recognition # type: ignore
 import time
 import traceback
 import logging
@@ -21,18 +23,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Upload folder
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'Uploaded_Files')
-MODEL_PATH = os.path.join(BASE_DIR, 'model', 'df_model.pt')
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Uploaded_Files')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-DEVICE = torch.device("cpu")
-
-# OpenCV face detector (Haar cascade)
-FACE_CASCADE = cv2.CascadeClassifier(
-    os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-)
-
 
 # Flask app
 app = Flask(__name__)
@@ -76,62 +68,6 @@ class ValidationDataset(Dataset):
     def __getitem__(self, idx):
         video_path = self.video_names[idx]
         frames = []
-
-        for i, frame in enumerate(self.frame_extract(video_path)):
-            # frame: BGR (OpenCV)
-            # 1) detect faces
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = FACE_CASCADE.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(30, 30),
-            )
-
-            # 2) crop around first detected face (if any)
-            if len(faces) > 0:
-                (x, y, w, h) = faces[0]
-                frame = frame[y:y+h, x:x+w]
-
-            # 3) transform and collect
-            frames.append(self.transform(frame))
-
-            if len(frames) == self.count:
-                break
-
-        if len(frames) == 0:
-            raise ValueError("No frames extracted from video")
-
-        # pad if less than count
-        while len(frames) < self.count:
-            frames.append(frames[-1])
-
-        frames = torch.stack(frames)
-        frames = frames[:self.count]
-        return frames.unsqueeze(0)
-
-    def frame_extract(self, path):
-        vidObj = cv2.VideoCapture(path)
-        success = True
-        while success:
-            success, image = vidObj.read()
-            if success:
-                yield image
-
-'''
-# Alternative Dataset using face_recognition library (Original version)
-class ValidationDataset(Dataset):
-    def __init__(self, video_names, sequence_length=20, transform=None):
-        self.video_names = video_names
-        self.transform = transform
-        self.count = sequence_length
-
-    def __len__(self):
-        return len(self.video_names)
-
-    def __getitem__(self, idx):
-        video_path = self.video_names[idx]
-        frames = []
         for i, frame in enumerate(self.frame_extract(video_path)):
             faces = face_recognition.face_locations(frame)
             try:
@@ -153,39 +89,11 @@ class ValidationDataset(Dataset):
             success, image = vidObj.read()
             if success:
                 yield image
-'''
-
-# ------------------------
-# Global transform & model (load ONCE)
-# ------------------------
-IM_SIZE = 112
-MEAN = [0.485, 0.456, 0.406]
-STD = [0.229, 0.224, 0.225]
-
-transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((IM_SIZE, IM_SIZE)),
-    transforms.ToTensor(),
-    transforms.Normalize(MEAN, STD)
-])
-
-if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
-
-logger.info(f"Loading model from: {MODEL_PATH}")
-model = Model(num_classes=2)
-state_dict = torch.load(MODEL_PATH, map_location=DEVICE)
-model.load_state_dict(state_dict)
-model.to(DEVICE)
-model.eval()
-logger.info("Model loaded and ready.")
-
 
 # ------------------------
 # Prediction
 # ------------------------
 def predict(model, img):
-    img = img.to(DEVICE)
     with torch.no_grad():
         fmap, logits = model(img)
         logits = F.softmax(logits, dim=1)
@@ -195,12 +103,30 @@ def predict(model, img):
 
 def detectFakeVideo(videoPath):
     start_time = time.time()
+    im_size = 112
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((im_size, im_size)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
 
     dataset = ValidationDataset([videoPath], sequence_length=20, transform=transform)
-    frames = dataset[0]          # shape (1, seq, C, H, W)
-    prediction = predict(model, frames)
+    model = Model(2)
+    path_to_model = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model/df_model.pt')
 
+    if not os.path.exists(path_to_model):
+        raise Exception("Model file not found")
+
+    model.load_state_dict(torch.load(path_to_model, map_location=torch.device('cpu')))
+    model.eval()
+
+    prediction = predict(model, dataset[0])
     processing_time = time.time() - start_time
+
     return prediction, processing_time
 
 # ------------------------
@@ -251,5 +177,4 @@ def detect():
         return jsonify({"error": f"Error processing video: {error_msg}"}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=3000)
