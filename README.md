@@ -85,5 +85,7 @@ assets/
 - View the thumbnail and upload for deepfake detection
 - See results in a dedicated result screen
 
-## Contributing
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+## Contributors
+- [Priyanshu Sharma](https://github.com/iPriyanshu19)
+- [Nandini](https://github.com/Nanzz94)
+- [Nikhil Kumar Srivastava](https://github.com/NK-25)
